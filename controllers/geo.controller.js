@@ -1,16 +1,18 @@
 const axios = require('axios')
+const geolib = require('geolib')
 const { Client } = require('@googlemaps/google-maps-services-js')
 
 const mapsClient = new Client({ axiosInstance: axios })
 const API_KEY = 'AIzaSyBrRh0NjtrSopoOrG-4_W3OP0nmzSDQK-M'
+
 const getCountry = async ({ latitude, longitude }) => {
     try {
-        const startLocation = await mapsClient.reverseGeocode({ params: { 
+        const location = await mapsClient.reverseGeocode({ params: { 
             latlng: { lat: latitude, lng: longitude }, 
             key: API_KEY,
             result_type: 'country'
         } })
-        const { data: { results } } = startLocation
+        const { data: { results } } = location
         if (!results || !results.length) throw new Error('ERR_NO_COUNTRY_RESULT_FOUND')
         return results.find(({ types }) => types.includes('country')).formatted_address
     } catch (error) {
@@ -21,12 +23,12 @@ const getCountry = async ({ latitude, longitude }) => {
 
 const getTimezone = async ({ latitude, longitude }) => {
     try {        
-        const startTimezone = await mapsClient.timezone({ params: { 
+        const timezone = await mapsClient.timezone({ params: { 
             location: `${latitude},${longitude}`, 
             timestamp: 0,
             key: API_KEY
         } })
-        const { data: results } = startTimezone
+        const { data: results } = timezone
         if (!results) throw new Error('ERR_NO_TIMEZONE_RESULT_FOUND')
         if (results.status !== 'OK') throw new Error(results.errorMessage)
         return results.rawOffset
@@ -36,7 +38,7 @@ const getTimezone = async ({ latitude, longitude }) => {
     }
 }
 
-const getDistance = async ({ origin, destination, units = 'metric' }) => {
+const getDistanceWithGMaps = async ({ origin, destination, units = 'metric' }) => {
     try {
         const { latitude: originLatitude, longitude: originLongitude } = origin
         const { latitude: destinationLatitude, longitude: destinationLongitude } = destination
@@ -45,15 +47,57 @@ const getDistance = async ({ origin, destination, units = 'metric' }) => {
                 destinations: [`${destinationLatitude},${destinationLongitude}`],
                 origins: [`${originLatitude},${originLongitude}`],
                 units,
-                key: 'AIzaSyD6X-NrF2hWPv8xMHJNjEpFNIb2WTLSXxU'
+                key: API_KEY
             }
         })
         const { data: results } = distanceMatrix
         if (!results) throw new Error('ERR_NO_DISTANCE_RESULT_FOUND')
-        // if (results.status !== 'OK') throw new Error('ERR_')
+        if (results.status !== 'OK') throw new Error(results.error_message)
         return results
     } catch (error) {
-        console.log({ method: "GetDistance", error: error.message })
+        console.log({ method: "GetDistanceWithGMaps", error: error.message })
+        return Promise.reject(error)
+    }
+}
+
+const getDistanceWithGeoLib = async ({ origin, destination }) => {
+    try {
+        const distanceInMeters = geolib.getDistance(origin, destination)
+        const distanceInKms = geolib.convertDistance(distanceInMeters, 'km')
+        return distanceInKms
+    } catch (error) {
+        console.log({ method: "GetDistanceWithGeoLib", error: error.message })
+        return Promise.reject(error)
+    }
+}
+
+const formatDistanceAndTimeResults = ({ startLocation, endLocation, distance }) => {
+    try {
+        const { country: startCountry, timezone: startTimezone, latitude: startLatitude, longitude: startLongitude } = startLocation
+        const { country: endCountry, timezone: endTimezone, latitude: endLatitude, longitude: endLongitude } = endLocation
+
+        return {
+            start: {
+                country: startCountry,
+                timezone: `GMT${startTimezone/3600}`,
+                location: { lat: startLatitude, lng: startLongitude }
+            },
+            end: {
+                country: endCountry,
+                timezone: `GMT${endTimezone/3600}`,
+                location: { lat: endLatitude, lng: endLongitude }
+            },
+            distance: {
+                value: distance,
+                units: 'km'
+            },
+            time_diff: {
+                value: (endTimezone - startTimezone)/3600,
+                units: 'hours'
+            }
+        }
+    } catch (error) {
+        console.log({ method: "FormatDistanceAndTimeResults", error: error.message })
         return Promise.reject(error)
     }
 }
@@ -61,14 +105,31 @@ const getDistance = async ({ origin, destination, units = 'metric' }) => {
 const getDistanceAndTime = async (req, res) => {
     try {
         const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLong }, units } = req.body
-        // const country = await getCountry({ latitude: startLat, longitude: startLon })
-        // const timezone = await getTimezone({ latitude: startLat, longitude: startLon })
-        const distanceMatrix = await getDistance({ 
+        const startCountry = await getCountry({ latitude: startLat, longitude: startLon })
+        const startTimezone = await getTimezone({ latitude: startLat, longitude: startLon })
+
+        const endCountry = await getCountry({ latitude: endLat, longitude: endLong })
+        const endTimezone = await getTimezone({ latitude: endLat, longitude: endLong })
+        let distance = null
+        try {
+            distance = await getDistanceWithGMaps({ 
             origin: { latitude: startLat, longitude: startLon },
             destination: { latitude: endLat, longitude: endLong },
             units
          })
-        return res.json({ distanceMatrix })
+        } catch (error) {
+            distance = await getDistanceWithGeoLib({
+                origin: { latitude: startLat, longitude: startLon },
+                destination: { latitude: endLat, longitude: endLong }
+            })
+        }
+        
+        const formattedResults = formatDistanceAndTimeResults({ 
+            startLocation: { country: startCountry, timezone: startTimezone, latitude: startLat, longitude: endLong }, 
+            endLocation: { country: endCountry, timezone: endTimezone, latitude: endLat, longitude: endLong }, 
+            distance 
+        })
+        return res.json(formattedResults)
     } catch (error) {
         return res.status(500).send(error)
     }

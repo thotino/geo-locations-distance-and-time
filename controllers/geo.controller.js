@@ -1,10 +1,17 @@
 const axios = require('axios')
 const geolib = require('geolib')
+const redis = require('redis')
+
+
+
 const { Client } = require('@googlemaps/google-maps-services-js')
 
 const mapsClient = new Client({ axiosInstance: axios })
 
-const { googleMapsAPIKey: API_KEY } = require('../config')
+const { googleMapsAPIKey: API_KEY, redisPort: REDIS_PORT } = require('../config')
+
+const redisClient = redis.createClient(REDIS_PORT)
+redisClient.on('error', (error) => { console.log(error) })
 
 const getCountry = async ({ latitude, longitude }) => {
   try {
@@ -107,34 +114,48 @@ const formatDistanceAndTimeResults = ({ startLocation, endLocation, distance }) 
   }
 }
 
-const getDistanceAndTime = async (req, res) => {
+
+const setRedisCachedData = async ({ reqBody, results }) => {
   try {
-    const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLong }, units } = req.body
+    const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = reqBody
+    const redisKey = `locations::start=${startLat},${startLon}::end=${endLat},${endLon}::unit=${units}`
+    await redisClient.connect()
+    await redisClient.set(redisKey, JSON.stringify(results))
+    await redisClient.disconnect()
+  } catch (error) {
+    console.log(`[SetRedisCachedData] ${error.message}`)
+  }
+}
+
+const getDistanceAndTime = async (req, res, next) => {
+  try {
+    const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = req.body
     const startCountry = await getCountry({ latitude: startLat, longitude: startLon })
     const startTimezone = await getTimezone({ latitude: startLat, longitude: startLon })
 
-    const endCountry = await getCountry({ latitude: endLat, longitude: endLong })
-    const endTimezone = await getTimezone({ latitude: endLat, longitude: endLong })
+    const endCountry = await getCountry({ latitude: endLat, longitude: endLon })
+    const endTimezone = await getTimezone({ latitude: endLat, longitude: endLon })
     let distance = null
     try {
       distance = await getDistanceWithGMaps({
         origin: { latitude: startLat, longitude: startLon },
-        destination: { latitude: endLat, longitude: endLong },
+        destination: { latitude: endLat, longitude: endLon },
         units
       })
     } catch (error) {
       distance = await getDistanceWithGeoLib({
         origin: { latitude: startLat, longitude: startLon },
-        destination: { latitude: endLat, longitude: endLong }
+        destination: { latitude: endLat, longitude: endLon }
       })
     }
 
     const formattedResults = formatDistanceAndTimeResults({
-      startLocation: { country: startCountry, timezone: startTimezone, latitude: startLat, longitude: endLong },
-      endLocation: { country: endCountry, timezone: endTimezone, latitude: endLat, longitude: endLong },
+      startLocation: { country: startCountry, timezone: startTimezone, latitude: startLat, longitude: startLon },
+      endLocation: { country: endCountry, timezone: endTimezone, latitude: endLat, longitude: endLon },
       distance
     })
-    return res.json(formattedResults)
+    await setRedisCachedData({ reqBody: req.body, results: formattedResults })
+    return res.status(200).json(formattedResults)
   } catch (error) {
     console.log({ method: 'GetDistanceAndTime', error: error.message })
     return res.status(500).json({ error: error.message })

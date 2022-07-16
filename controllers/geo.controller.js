@@ -3,7 +3,8 @@ const geolib = require('geolib')
 const { Client } = require('@googlemaps/google-maps-services-js')
 
 const mapsClient = new Client({ axiosInstance: axios })
-const API_KEY = 'AIzaSyBrRh0NjtrSopoOrG-4_W3OP0nmzSDQK-M'
+
+const { googleMapsAPIKey: API_KEY } = require('../config')
 
 const getCountry = async ({ latitude, longitude }) => {
     try {

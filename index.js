@@ -3,15 +3,17 @@ const bodyParser = require('body-parser');
 const { verifyRequest } = require('./middlewares')
 const { getDistanceAndTime } = require('./controllers/geo.controller')
 
-const app = express();
+const { port: PORT } = require('./config')
 
-app.use(bodyParser.json());
+const app = express()
+
+app.use(bodyParser.json())
 
 
 app.post('/api/distance_and_time', [ verifyRequest ], getDistanceAndTime)
 
-app.listen(3000, () => {
-  console.log('Server is up on port 3000');
-});
+app.listen(PORT, () => {
+  console.log(`Server is up on port ${PORT}`)
+})
 
 module.exports = app;

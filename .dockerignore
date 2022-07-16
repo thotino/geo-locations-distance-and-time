@@ -1,0 +1,13 @@
+
+.git
+.nyc_output
+coverage
+node_modules
+tests
+
+.dockerignore
+.gitignore
+Dockerfile
+README.md
+yarn-error.log
+yarn.lock

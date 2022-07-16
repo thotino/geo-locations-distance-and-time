@@ -79,12 +79,12 @@ const formatDistanceAndTimeResults = ({ startLocation, endLocation, distance }) 
         return {
             start: {
                 country: startCountry,
-                timezone: `GMT${startTimezone/3600}`,
+                timezone: Math.sign(startTimezone) === 1 ? `GMT+${startTimezone/3600}` : `GMT${startTimezone/3600}`,
                 location: { lat: startLatitude, lng: startLongitude }
             },
             end: {
                 country: endCountry,
-                timezone: `GMT${endTimezone/3600}`,
+                timezone: Math.sign(endTimezone) === 1 ? `GMT+${endTimezone/3600}` : `GMT${endTimezone/3600}`,
                 location: { lat: endLatitude, lng: endLongitude }
             },
             distance: {
@@ -131,7 +131,8 @@ const getDistanceAndTime = async (req, res) => {
         })
         return res.json(formattedResults)
     } catch (error) {
-        return res.status(500).send(error)
+        console.log({ method: "GetDistanceAndTime", error: error.message })
+        return res.status(500).json({ error: error.message })
     }
 }
 

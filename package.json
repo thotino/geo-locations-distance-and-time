@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "node .",
+    "lint": "./node_modules/.bin/standard .",
+    "lintfix": "./node_modules/.bin/standard . --fix"
+  },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.3.16",
     "axios": "^0.27.2",
@@ -17,6 +22,6 @@
     "nconf": "^0.12.0"
   },
   "devDependencies": {
-    "eslint": "^8.19.0"
+    "standard": "^17.0.0"
   }
 }

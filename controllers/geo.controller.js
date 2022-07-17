@@ -2,8 +2,6 @@ const axios = require('axios')
 const geolib = require('geolib')
 const redis = require('redis')
 
-
-
 const { Client } = require('@googlemaps/google-maps-services-js')
 
 const mapsClient = new Client({ axiosInstance: axios })

@@ -11,6 +11,11 @@ const { googleMapsAPIKey: API_KEY, redisPort: REDIS_PORT } = require('../config'
 const redisClient = redis.createClient(REDIS_PORT)
 redisClient.on('error', (error) => { console.log(error) })
 
+/**
+ * Use the Reverse Geocode module to get the country 
+ * @param {*} param0 
+ * @returns 
+ */
 const getCountry = async ({ latitude, longitude }) => {
   try {
     const location = await mapsClient.reverseGeocode({
@@ -29,6 +34,11 @@ const getCountry = async ({ latitude, longitude }) => {
   }
 }
 
+/**
+ * Use the Timezone module to get the timezone raw offset
+ * @param {*} param0 
+ * @returns 
+ */
 const getTimezone = async ({ latitude, longitude }) => {
   try {
     const timezone = await mapsClient.timezone({
@@ -48,6 +58,10 @@ const getTimezone = async ({ latitude, longitude }) => {
   }
 }
 
+/**
+ * Use the distance matrix module to compute the distance between an origin and a destination
+ * @returns 
+ */
 const getDistanceWithGMaps = async ({ origin, destination, units = 'metric' }) => {
   try {
     const { latitude: originLatitude, longitude: originLongitude } = origin
@@ -70,6 +84,10 @@ const getDistanceWithGMaps = async ({ origin, destination, units = 'metric' }) =
   }
 }
 
+/**
+ * Use the geolib module to compute the distance between two geo locations
+ * @returns 
+ */
 const getDistanceWithGeoLib = async ({ origin, destination }) => {
   try {
     const distanceInMeters = geolib.getDistance(origin, destination)
@@ -81,6 +99,10 @@ const getDistanceWithGeoLib = async ({ origin, destination }) => {
   }
 }
 
+/**
+ * Return a formatted object from the locations and the computed distance
+ * @returns 
+ */
 const formatDistanceAndTimeResults = ({ startLocation, endLocation, distance }) => {
   try {
     const { country: startCountry, timezone: startTimezone, latitude: startLatitude, longitude: startLongitude } = startLocation
@@ -125,6 +147,13 @@ const setRedisCachedData = async ({ reqBody, results }) => {
   }
 }
 
+/**
+ * the handler
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ * @returns 
+ */
 const getDistanceAndTime = async (req, res, next) => {
   try {
     const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = req.body

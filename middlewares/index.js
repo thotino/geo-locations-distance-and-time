@@ -1,10 +1,5 @@
 const Joi = require('joi')
-const redis = require('redis')
-
-const { redisPort: REDIS_PORT } = require('../config')
-
-const redisClient = redis.createClient(REDIS_PORT)
-redisClient.on('error', (error) => { console.log(error) })
+const { getCachedData } = require('../utils/redisUtils')
 
 /**
  * A joi schema to validate the user request
@@ -26,7 +21,7 @@ const schema = Joi.object({
  * @param {*} req - the request object
  * @param {*} res - the response object
  * @param {*} next - the next middleware function
- * @returns 
+ * @returns
  */
 const verifyRequest = (req, res, next) => {
   try {
@@ -45,16 +40,14 @@ const verifyRequest = (req, res, next) => {
  * @param {*} req - the request object
  * @param {*} res - the response object
  * @param {*} next - the next middleware function
- * @returns 
+ * @returns
  */
 const getRedisCachedData = async (req, res, next) => {
   try {
     const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = req.body
     const redisKey = `locations::start=${startLat},${startLon}::end=${endLat},${endLon}::unit=${units}`
 
-    await redisClient.connect()
-    const cachedData = await redisClient.get(redisKey)
-    await redisClient.disconnect()
+    const cachedData = await getCachedData({ key: redisKey })
 
     if (cachedData) {
       return res.json(JSON.parse(cachedData))

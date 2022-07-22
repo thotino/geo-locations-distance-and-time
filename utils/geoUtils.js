@@ -13,6 +13,8 @@ const { googleMapsAPIKey: API_KEY } = require('../config')
  */
 const getCountry = async ({ latitude, longitude }) => {
   try {
+    if (!latitude || !longitude) throw new Error('ERR_NO_VALID_PARAMETER_PROVIDED')
+
     const location = await mapsClient.reverseGeocode({
       params: {
         latlng: { lat: latitude, lng: longitude },

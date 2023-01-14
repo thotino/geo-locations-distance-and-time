@@ -10,3 +10,14 @@ This project exposes an API that return the distance and the time difference bet
 * ExpressJS
 * Redis
 * GMaps APIs
+
+### Start a redis instance
+
+```sh
+docker run --name redis -p 6379:6379 -d redis
+```
+
+### Start a local instance of this API
+```sh
+yarn start
+```

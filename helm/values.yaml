@@ -1,0 +1,19 @@
+app:
+  name: gozem
+  group: gozem
+  replicaCount: 1
+  containers:
+    image: gozem-app
+    port: 3000
+    config: 
+      - name: gozem-app
+    env:
+      - key: APP_GOOGLE_MAPS_API_KEY
+        value: AIzaSyBrRh0NjtrSopoOrG-4_W3OP0nmzSDQK-M
+      - key: APP_SERVER_PORT
+        value: 3000
+      - key: APP_REDIS_URL
+        value: redis://VQAsdX0miU@redis-master.default.svc.cluster.local:6379
+  service:
+    type: LoadBalancer
+    port: 3000

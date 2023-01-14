@@ -1,5 +1,7 @@
 const { getCountry, getTimezone, getDistanceWithGMaps, getDistanceWithGeoLib } = require('../utils/geoUtils')
-const { setCachedData } = require('../utils/redisUtils')
+
+const { RedisClient } = require('../utils/redis')
+const redisClient = new RedisClient()
 
 /**
  * Return a formatted object from the locations and the computed distance
@@ -40,7 +42,7 @@ const setRedisCachedData = async ({ reqBody, results }) => {
   try {
     const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = reqBody
     const redisKey = `locations::start=${startLat},${startLon}::end=${endLat},${endLon}::unit=${units}`
-    await setCachedData({ key: redisKey, data: results })
+    await redisClient.set(redisKey, results)
   } catch (error) {
     console.log(`[SetRedisCachedData] ${error.message}`)
   }

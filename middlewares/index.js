@@ -1,6 +1,7 @@
 const Joi = require('joi')
 const { getCachedData } = require('../utils/redisUtils')
-
+const { RedisClient } = require('../utils/redis')
+const redisClient = new RedisClient()
 /**
  * A joi schema to validate the user request
  */
@@ -48,7 +49,7 @@ const getRedisCachedData = async (req, res, next) => {
     const { start: { lat: startLat, lng: startLon }, end: { lat: endLat, lng: endLon }, units } = req.body
     const redisKey = `locations::start=${startLat},${startLon}::end=${endLat},${endLon}::unit=${units}`
 
-    const cachedData = await getCachedData({ key: redisKey })
+    const cachedData = await redisClient.get(redisKey)
 
     if (cachedData) {
       return res.json(JSON.parse(cachedData))

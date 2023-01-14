@@ -10,6 +10,9 @@ const app = express()
 
 app.use(bodyParser.json())
 
+// Healthcheck
+app.get('/hc', (req, res) => { res.json({ status: 'OK' }) })
+
 app.post('/api/distance_and_time', [verifyRequest, getRedisCachedData], getDistanceAndTime)
 
 app.listen(PORT, () => {
